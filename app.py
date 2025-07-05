@@ -2,27 +2,32 @@ import streamlit as st
 import fitz  # PyMuPDF
 from search_engine import build_search_index, search
 
-st.set_page_config(page_title="AI PDF Search Engine", layout="wide")
-st.title("🔍 AI Document Search Engine (with Upload)")
+st.set_page_config(page_title="AI PDF Search", layout="wide")
+st.title("🔍 AI Document Search Engine")
 
 # Upload PDF(s)
 uploaded_files = st.file_uploader("📄 Upload one or more PDF files", type=["pdf"], accept_multiple_files=True)
 
 # Extract text from PDF
-def extract_text_from_uploaded_pdf(uploaded_file):
+def extract_text_from_uploaded_pdf(file_bytes):
     text = ""
-    with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
+    with fitz.open(stream=file_bytes, filetype="pdf") as doc:
         for page in doc:
             text += page.get_text()
     return text
 
-# Build search index from uploaded files
-if st.button("⚙️ Load and Index Uploaded PDFs"):
+# Build search index
+if st.button("⚙️ Load and Index PDFs"):
     if uploaded_files:
         documents = []
         for uploaded_file in uploaded_files:
-            text = extract_text_from_uploaded_pdf(uploaded_file)
-            st.write(f"📄 {uploaded_file.name}: {len(text)} characters extracted")  # DEBUG
+            file_bytes = uploaded_file.getvalue()
+            text = extract_text_from_uploaded_pdf(file_bytes)
+
+            # Debug: show preview
+            st.write(f"🧪 Preview of extracted text from {uploaded_file.name}:")
+            st.code(text[:500])  # preview first 500 chars
+
             documents.append({
                 "text": text,
                 "source": uploaded_file.name
@@ -32,18 +37,18 @@ if st.button("⚙️ Load and Index Uploaded PDFs"):
             index, metadata = build_search_index(documents)
             st.session_state.index = index
             st.session_state.metadata = metadata
-            st.success(f"✅ Indexed {len(documents)} files.")
+            st.success(f"✅ Indexed {len(documents)} documents")
         else:
-            st.error("❌ No text extracted from uploaded PDFs.")
+            st.error("❌ No text extracted.")
     else:
-        st.warning("⚠️ Please upload one or more PDFs first.")
+        st.warning("⚠️ Please upload PDFs first.")
 
-# Search query input
+# Search section
 if "index" in st.session_state:
     query = st.text_input("🔎 Enter your search query")
     if query:
         results = search(query, st.session_state.index, st.session_state.metadata)
-        st.subheader("📌 Top Matches")
+        st.subheader("📌 Top Matches:")
         if results:
             for r in results:
                 st.markdown(f"📄 **{r['source']}**")
@@ -52,4 +57,4 @@ if "index" in st.session_state:
         else:
             st.warning("😕 No relevant results found.")
 else:
-    st.info("👆 Upload and index your PDFs to start searching.")
+    st.info("👆 Upload and index PDFs to start searching.")
