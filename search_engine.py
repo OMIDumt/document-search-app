@@ -6,30 +6,25 @@ import re
 
 def split_into_chunks(text, max_tokens=200):
     """
-    Split the text into chunks for embedding. 
-    This uses simple paragraph or sentence-based splitting.
+    Split text into chunks using paragraphs or sentence grouping (more coherent).
     """
-    # Split by double newlines or periods
-    raw_chunks = re.split(r'\n\n|\.\s', text)
-    cleaned_chunks = [chunk.strip() for chunk in raw_chunks if len(chunk.strip()) > 20]
+    import re
 
-    # Optional: further truncate long chunks
-    final_chunks = []
-    for chunk in cleaned_chunks:
-        if len(chunk.split()) > max_tokens:
-            sentences = chunk.split(". ")
-            current = ""
-            for sentence in sentences:
-                if len((current + sentence).split()) <= max_tokens:
-                    current += sentence + ". "
-                else:
-                    final_chunks.append(current.strip())
-                    current = sentence + ". "
-            final_chunks.append(current.strip())
+    # First, try splitting by double newlines (paragraphs)
+    paragraphs = [p.strip() for p in re.split(r'\n{2,}', text) if len(p.strip()) > 30]
+
+    chunks = []
+    for para in paragraphs:
+        words = para.split()
+        if len(words) <= max_tokens:
+            chunks.append(para)
         else:
-            final_chunks.append(chunk)
+            # Break long paragraphs into smaller chunks
+            for i in range(0, len(words), max_tokens):
+                chunk = " ".join(words[i:i + max_tokens])
+                chunks.append(chunk)
+    return chunks
 
-    return final_chunks
 
 
 def build_search_index(documents):
